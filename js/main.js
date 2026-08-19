@@ -50,25 +50,45 @@ if (revealItems.length) {
 }
 
 if (form && status) {
-  form.addEventListener('submit', (event) => {
+  form.addEventListener('invalid', () => {
+    status.textContent = 'Please fill in all the required fields so we can help you properly.';
+    status.className = 'form-status error';
+  }, true);
+
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    const name = form.querySelector('#name');
-    const phone = form.querySelector('#phone');
-    const device = form.querySelector('#device');
-    const message = form.querySelector('#message');
-
-    const inputs = [name, phone, device, message];
-    const isValid = inputs.every((input) => input.value.trim());
-
-    if (!isValid) {
-      status.textContent = 'Please fill in all the required fields so we can help you properly.';
-      status.className = 'form-status error';
+    if (!form.checkValidity()) {
+      form.reportValidity();
       return;
     }
 
-    status.textContent = 'Thanks! Your message has been received. We will get back to you shortly.';
-    status.className = 'form-status success';
-    form.reset();
+    const submitButton = form.querySelector('.submit-button');
+    submitButton.disabled = true;
+    submitButton.classList.remove('is-submitted');
+    submitButton.classList.add('is-sending');
+    status.textContent = 'Sending your message…';
+    status.className = 'form-status';
+
+    try {
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { Accept: 'application/json' }
+      });
+
+      if (!response.ok) throw new Error('Message could not be sent');
+
+      form.reset();
+      submitButton.classList.remove('is-sending');
+      submitButton.classList.add('is-submitted');
+      status.textContent = 'Message submitted successfully.';
+      status.className = 'form-status success';
+    } catch (error) {
+      submitButton.disabled = false;
+      submitButton.classList.remove('is-sending');
+      status.textContent = 'We could not send your message. Please try again or contact us by phone.';
+      status.className = 'form-status error';
+    }
   });
 }
